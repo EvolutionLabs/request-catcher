@@ -14,7 +14,7 @@ window.catcher.connect = function() {
       conn.onclose = function(evt) {
         console.log("connection closed", evt);
         // Reconnect after a pause.
-        setTimeout(window.catcher.connect, 1000);
+        setTimeout(window.catcher.connect, 10000);
       };
       conn.onmessage = function(evt) {
         var req = JSON.parse(evt.data);

@@ -22,6 +22,7 @@ type Catcher struct {
 	hosts   map[string]*Host
 }
 
+//noinspection GoUnusedExportedFunction
 func NewCatcher(config *Configuration) *Catcher {
 	c := &Catcher{
 		config: config,
@@ -58,7 +59,7 @@ func withCacheHeaders(h http.Handler) http.Handler {
 func (c *Catcher) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(req.Host, "www.") {
 		rw.Header().Set("Connection", "close")
-		url := "https://" + strings.TrimPrefix(req.Host, "www.") + req.URL.String()
+		url := "http://" + strings.TrimPrefix(req.Host, "www.") + req.URL.String()
 		http.Redirect(rw, req, url, http.StatusMovedPermanently)
 		return
 	}
@@ -105,13 +106,22 @@ func (c *Catcher) initClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hostString := hostWithoutPort(r.Host)
+	_, a := c.hosts[hostString]
+
+	clientHost := c.host(r.Host)
+
+	if a == true {
+		http.Error(w, "Method not allowed", 405)
+		return
+	}
+
 	ws, err := c.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		c.logger.Error(err.Error())
 		return
 	}
 
-	clientHost := c.host(r.Host)
 	c.logger.Infof("Initializing a new client on host %v", clientHost.Host)
 	clientHost.clients.Store(c, newClient(c, clientHost, ws))
 }
