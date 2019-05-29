@@ -11,6 +11,8 @@ type Configuration struct {
 	Host      string
 	RootHost  string `json:"root_host"`
 	TLSDir    string `json:"tls_dir"`
+	User      string `json:"user"`
+	Password  string `json:"password"`
 }
 
 func LoadConfiguration(filename string) (*Configuration, error) {

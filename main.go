@@ -3,12 +3,9 @@ package main
 import (
 	"crypto/subtle"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/pprof"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/EvolutionLabs/request-catcher/catcher"
@@ -29,7 +26,7 @@ func main() {
 	fullHost := config.Host + ":" + strconv.Itoa(config.HTTPPort)
 	server := http.Server{
 		Addr:         fullHost,
-		Handler:      withPProfHandler(newCatcher),
+		Handler:      basicMiddleware(newCatcher, config),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
@@ -42,34 +39,26 @@ func main() {
 	}
 }
 
-func withPProfHandler(next http.Handler) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	pprofHandler := basicAuth(mux, os.Getenv("PPROFPW"), "admin")
+func basicMiddleware(next http.Handler, config *catcher.Configuration) http.Handler {
+	basicAuthHandler := basicAuth(next, []byte(config.User), []byte(config.Password), "logged-in")
 
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if req.Host == "requestcatcher.com" && strings.HasPrefix(req.URL.Path, "/debug/pprof") {
-			pprofHandler.ServeHTTP(rw, req)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "POST" {
+			basicAuthHandler.ServeHTTP(w, r)
 			return
 		}
-		next.ServeHTTP(rw, req)
+		next.ServeHTTP(w, r)
 	})
 }
 
-func basicAuth(handler http.Handler, password, realm string) http.Handler {
-	p := []byte(password)
-
+func basicAuth(handler http.Handler, username []byte, password []byte, realm string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, pass, ok := r.BasicAuth()
-		if !ok || subtle.ConstantTimeCompare([]byte(pass), p) != 1 {
+		user, pass, ok := r.BasicAuth()
+		if !ok || subtle.ConstantTimeCompare([]byte(user), username) != 1 || subtle.ConstantTimeCompare([]byte(pass), password) != 1 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="`+realm+`"`)
 			w.WriteHeader(401)
 			//noinspection GoUnhandledErrorResult
-			io.WriteString(w, "Unauthorized\n")
+			w.Write([]byte("Unauthorized.\n"))
 			return
 		}
 		handler.ServeHTTP(w, r)

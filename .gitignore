@@ -26,3 +26,5 @@ _testmain.go
 request-catcher
 
 .idea/
+
+config/local.json

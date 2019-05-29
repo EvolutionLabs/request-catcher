@@ -88,7 +88,6 @@ func (c *Catcher) indexHandler(w http.ResponseWriter, r *http.Request) {
 	// Some people mistakenly expect requests to the index of the subdomain
 	// to be caught. For now, just catch those as well. Later I should move
 	// the index to be hosted at requestcatcher.com.
-	c.Catch(r)
 
 	http.ServeFile(w, r, "frontend/dist/index.html")
 }
@@ -97,7 +96,7 @@ func (c *Catcher) catchRequests(w http.ResponseWriter, r *http.Request) {
 	c.Catch(r)
 
 	// Respond to the request
-	fmt.Fprintf(w, "request caught")
+	fmt.Fprintf(w, "ok")
 }
 
 func (c *Catcher) initClient(w http.ResponseWriter, r *http.Request) {
