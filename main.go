@@ -40,10 +40,9 @@ func main() {
 }
 
 func basicMiddleware(next http.Handler, config *catcher.Configuration) http.Handler {
-	basicAuthHandler := basicAuth(next, []byte(config.User), []byte(config.Password), "logged-in")
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "POST" {
+		if config.PostOnly == true && r.Method != "POST" {
+			basicAuthHandler := basicAuth(next, []byte(config.User), []byte(config.Password), "logged-in")
 			basicAuthHandler.ServeHTTP(w, r)
 			return
 		}

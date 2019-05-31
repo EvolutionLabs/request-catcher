@@ -110,7 +110,7 @@ func (c *Catcher) initClient(w http.ResponseWriter, r *http.Request) {
 
 	clientHost := c.host(r.Host)
 
-	if a == true {
+	if c.config.AllowMultiple == false && a == true {
 		http.Error(w, "Method not allowed", 405)
 		return
 	}
